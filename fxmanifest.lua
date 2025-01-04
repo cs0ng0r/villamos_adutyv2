@@ -8,6 +8,8 @@ version '1.2.2'
 
 ui_page 'html/index.html'
 
+lua54 "yes"
+
 files {
 	"icons/*.png",
 	"html/**"
