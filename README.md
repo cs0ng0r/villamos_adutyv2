@@ -1,4 +1,4 @@
-# [ESX] Admin Duty V2 (NEW VERSION) | villamos_adutyv2
+# [ESX/QB] Admin Duty V2 (NEW VERSION) | villamos_adutyv2
 Optimized Admin Duty with panel, if you like my work, join our [Discord](https://discord.gg/esnawXn5q5)
 # Marvel Studios
 [Discord](https://discord.gg/esnawXn5q5) <br/>
@@ -12,7 +12,6 @@ Optimized Admin Duty with panel, if you like my work, join our [Discord](https:/
 -Discord log <br/>
 -Count duty time <br/>
 -Server logo over admins head <br/>
--Clothes or ped on duty <br/>
 -On/off switchable admin tag, player ids, god mode, speed run, invisibility, anti ragdoll, copy coords, heal, teleport to marker <br/>
 # Usage
 By default, you can open the panel with O (or /admenu), but it can be binded to any key in settings!
@@ -31,3 +30,6 @@ The following commands can be disabled in config:<br/>
 /adcoords<br/>
 /adheal<br/>
 /admarker<br/>
+
+
+## Removed ped and clothing change when toggling duty

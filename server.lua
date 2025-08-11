@@ -1,108 +1,123 @@
-local inDuty = {} 
+local inDuty = {}
 local tags = {}
 local dutyTimes = json.decode(LoadResourceFile(GetCurrentResourceName(), "data.json")) or {}
 
-ESX.RegisterServerCallback("villamos_aduty:openPanel", function(source, cb)
-    local xAdmin = ESX.GetPlayerFromId(source)
-    if not IsAdmin(xAdmin.getGroup()) then return cb(false) end
+Bridge.RegisterCallback("villamos_aduty:openPanel", function(source, cb)
+    local xAdmin = Bridge.GetPlayer(source)
+    if not IsAdmin(Bridge.GetPlayerGroup(xAdmin)) then return cb(false) end
     local players = {}
-    local play = ESX.GetPlayers()
-    for i=1, #play do
-        local xPlayer = ESX.GetPlayerFromId(play[i])
-        
-        if xPlayer then 
-            players[#players+1] = {
-                id = xPlayer.source,
-                name = GetPlayerName(xPlayer.source),
-                group = xPlayer.getGroup(),
-                job = xPlayer.getJob().label
+    local play = Bridge.GetPlayers()
+    for i = 1, #play do
+        local xPlayer = Bridge.GetPlayer(play[i])
+
+        if xPlayer then
+            players[#players + 1] = {
+                id = Bridge.GetPlayerSource(xPlayer),
+                name = GetPlayerName(Bridge.GetPlayerSource(xPlayer)),
+                group = Bridge.GetPlayerGroup(xPlayer),
+                job = Bridge.GetPlayerJob(xPlayer).label
             }
-        end 
+        end
     end
 
-    cb(true, xAdmin.getGroup(), players)
+    cb(true, Bridge.GetPlayerGroup(xAdmin), players)
 end)
 
 RegisterNetEvent('villamos_aduty:setTag', function(enable)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if not inDuty[xPlayer.source] then return end 
+    local xPlayer = Bridge.GetPlayer(source)
+    if not inDuty[Bridge.GetPlayerSource(xPlayer)] then return end
 
-    tags[xPlayer.source] = enable and inDuty[xPlayer.source].tag or nil
+    tags[Bridge.GetPlayerSource(xPlayer)] = enable and inDuty[Bridge.GetPlayerSource(xPlayer)].tag or nil
     TriggerClientEvent("villamos_aduty:sendData", -1, tags)
 end)
 
 RegisterNetEvent('villamos_aduty:setDutya', function(enable)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if inDuty[xPlayer.source] then 
-        TriggerClientEvent("villamos_aduty:setDuty", xPlayer.source, false, inDuty[xPlayer.source].group)
-        if tags[xPlayer.source] then 
-            tags[xPlayer.source] = nil
+    local xPlayer = Bridge.GetPlayer(source)
+    if inDuty[Bridge.GetPlayerSource(xPlayer)] then
+        TriggerClientEvent("villamos_aduty:setDuty", Bridge.GetPlayerSource(xPlayer), false,
+            inDuty[Bridge.GetPlayerSource(xPlayer)].group)
+        if tags[Bridge.GetPlayerSource(xPlayer)] then
+            tags[Bridge.GetPlayerSource(xPlayer)] = nil
             TriggerClientEvent("villamos_aduty:sendData", -1, tags)
-        end 
-        local dutyMinutes = math.floor((os.time() - inDuty[xPlayer.source].start) / 60)
-        inDuty[xPlayer.source] = nil
-        Config.Notify(-1, _U("went_offduty", GetPlayerName(xPlayer.source)))
+        end
+        local dutyMinutes = math.floor((os.time() - inDuty[Bridge.GetPlayerSource(xPlayer)].start) / 60)
+        inDuty[Bridge.GetPlayerSource(xPlayer)] = nil
+        Bridge.Notify(-1, locale("went_offduty", GetPlayerName(Bridge.GetPlayerSource(xPlayer))))
 
-        dutyTimes[xPlayer.identifier] = (dutyTimes[xPlayer.identifier] or 0) + dutyMinutes
+        dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] = (dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] or 0) +
+            dutyMinutes
         SaveResourceFile(GetCurrentResourceName(), "data.json", json.encode(dutyTimes), -1)
-        LogToDiscord(GetPlayerName(xPlayer.source), false, FormatMinutes(dutyTimes[xPlayer.identifier] or 0), FormatMinutes(dutyMinutes))
-    else 
-        local group = Config.DiscordTags and GetDiscordRole(xPlayer.source) or xPlayer.getGroup()
+        LogToDiscord(GetPlayerName(Bridge.GetPlayerSource(xPlayer)), false,
+            FormatMinutes(dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] or 0), FormatMinutes(dutyMinutes))
+    else
+        local group = Config.DiscordTags and GetDiscordRole(Bridge.GetPlayerSource(xPlayer)) or
+            Bridge.GetPlayerGroup(xPlayer)
 
-        if not group or not Config.Admins[group] then return Config.Notify(xPlayer.source, _U("cant_duty")) end 
+        if not group or not Config.Admins[group] then
+            return Bridge.Notify(Bridge.GetPlayerSource(xPlayer),
+                locale("cant_duty"))
+        end
 
-        inDuty[xPlayer.source] = {
-            ped = Config.Admins[group].ped,
-            tag = { label = Config.Admins[group].tag .. " " .. GetPlayerName(xPlayer.source), color = Config.Admins[group].color, logo = Config.Admins[group].logo },
+        inDuty[Bridge.GetPlayerSource(xPlayer)] = {
+            tag = { label = Config.Admins[group].tag .. " " .. GetPlayerName(Bridge.GetPlayerSource(xPlayer)), color = Config.Admins[group].color, logo = Config.Admins[group].logo },
             group = group,
             start = os.time()
         }
-        TriggerClientEvent("villamos_aduty:setDuty", xPlayer.source, true, group)
-        Config.Notify(-1, _U("went_onduty", GetPlayerName(xPlayer.source)))
+        TriggerClientEvent("villamos_aduty:setDuty", Bridge.GetPlayerSource(xPlayer), true, group)
+        Bridge.Notify(-1, locale("went_onduty", GetPlayerName(Bridge.GetPlayerSource(xPlayer))))
 
-        tags[xPlayer.source] = inDuty[xPlayer.source].tag
+        tags[Bridge.GetPlayerSource(xPlayer)] = inDuty[Bridge.GetPlayerSource(xPlayer)].tag
         TriggerClientEvent("villamos_aduty:sendData", -1, tags)
 
-        LogToDiscord(GetPlayerName(xPlayer.source), true, FormatMinutes((dutyTimes[xPlayer.identifier] or 0))) 
-    end 
+        LogToDiscord(GetPlayerName(Bridge.GetPlayerSource(xPlayer)), true,
+            FormatMinutes((dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] or 0)))
+    end
 end)
 
 AddEventHandler('playerDropped', function(reason)
-    local xPlayer = ESX.GetPlayerFromId(source)
-    if not xPlayer or not inDuty[xPlayer.source] then return end
-    if tags[xPlayer.source] then 
-        tags[xPlayer.source] = nil
+    local xPlayer = Bridge.GetPlayer(source)
+    if not xPlayer or not inDuty[Bridge.GetPlayerSource(xPlayer)] then return end
+    if tags[Bridge.GetPlayerSource(xPlayer)] then
+        tags[Bridge.GetPlayerSource(xPlayer)] = nil
         TriggerClientEvent("villamos_aduty:sendData", -1, tags)
-    end 
-    local dutyMinutes = math.floor((os.time() - inDuty[xPlayer.source].start) / 60)
-    inDuty[xPlayer.source] = nil
-    Config.Notify(-1, _U("went_offduty", GetPlayerName(xPlayer.source)))
+    end
+    local dutyMinutes = math.floor((os.time() - inDuty[Bridge.GetPlayerSource(xPlayer)].start) / 60)
+    inDuty[Bridge.GetPlayerSource(xPlayer)] = nil
+    Bridge.Notify(-1, locale("went_offduty", GetPlayerName(Bridge.GetPlayerSource(xPlayer))))
 
-    dutyTimes[xPlayer.identifier] = (dutyTimes[xPlayer.identifier] or 0) + dutyMinutes
+    dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] = (dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] or 0) + dutyMinutes
     SaveResourceFile(GetCurrentResourceName(), "data.json", json.encode(dutyTimes), -1)
-    LogToDiscord(GetPlayerName(xPlayer.source), false, FormatMinutes(dutyTimes[xPlayer.identifier] or 0), FormatMinutes(dutyMinutes))
+    LogToDiscord(GetPlayerName(Bridge.GetPlayerSource(xPlayer)), false,
+        FormatMinutes(dutyTimes[Bridge.GetPlayerIdentifier(xPlayer)] or 0), FormatMinutes(dutyMinutes))
 end)
 
-RegisterNetEvent('esx:playerLoaded')
-AddEventHandler('esx:playerLoaded', function(playerData)
-    TriggerClientEvent("villamos_aduty:sendData", source, tags)
-end)
+if Bridge.Framework == 'ESX' then
+    RegisterNetEvent('esx:playerLoaded')
+    AddEventHandler('esx:playerLoaded', function(playerData)
+        TriggerClientEvent("villamos_aduty:sendData", source, tags)
+    end)
+elseif Bridge.Framework == 'QB' then
+    RegisterNetEvent('QBCore:Client:OnPlayerLoaded')
+    AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
+        TriggerClientEvent("villamos_aduty:sendData", source, tags)
+    end)
+end
 
 function LogToDiscord(name, duty, alltime, time)
-    if not Config.Webhook then return end 
+    if not Config.Webhook then return end
     local connect = {
         {
             ["color"] = (duty and 27946 or 10616832),
-            ["title"] = "**".. name .."**",
-            ["description"] = (duty and _U("went_onduty", name) or _U("went_offduty", name)),
+            ["title"] = "**" .. name .. "**",
+            ["description"] = (duty and locale("went_onduty", name) or locale("went_offduty", name)),
             ["fields"] = {
                 {
-                    ["name"] = _U("alltime"),
+                    ["name"] = locale("alltime"),
                     ["value"] = alltime,
                     ["inline"] = true
                 },
                 {
-                    ["name"] = _U("dutytime"),
+                    ["name"] = locale("dutytime"),
                     ["value"] = time or "-",
                     ["inline"] = true
                 },
@@ -110,36 +125,38 @@ function LogToDiscord(name, duty, alltime, time)
             ["author"] = {
                 ["name"] = "Marvel Studios",
                 ["url"] = "https://discord.gg/esnawXn5q5",
-                ["icon_url"] = "https://cdn.discordapp.com/attachments/917181033626087454/954753156821188658/marvel1.png"
+                ["iconlocalerl"] =
+                "https://cdn.discordapp.com/attachments/917181033626087454/954753156821188658/marvel1.png"
             },
             ["footer"] = {
-                ["text"] = os.date("%Y-%m-%d %X").." | villamos_aduty :)",
+                ["text"] = os.date("%Y-%m-%d %X") .. " | villamos_aduty :)",
             },
         }
     }
-    PerformHttpRequest(Config.Webhook, function(err, text, headers) end, 'POST', json.encode({embeds = connect}), { ['Content-Type'] = 'application/json' })
+    PerformHttpRequest(Config.Webhook, function(err, text, headers) end, 'POST', json.encode({ embeds = connect }),
+        { ['Content-Type'] = 'application/json' })
 end
 
 function FormatMinutes(m)
     local minutes = m % 60
-	local hours = math.floor((m - minutes) / 60)
-	return hours.." h "..minutes.." m"
+    local hours = math.floor((m - minutes) / 60)
+    return hours .. " h " .. minutes .. " m"
 end
 
 function IsAdmin(group)
-    for i=1, #Config.Perms do 
-        if Config.Perms[i] == group then 
-            return true 
-        end 
-    end 
+    for i = 1, #Config.Perms do
+        if Config.Perms[i] == group then
+            return true
+        end
+    end
 
     return false
-end 
+end
 
 function GetPlayerDiscord(src)
     local identifiers = GetPlayerIdentifiers(src)
 
-    for i=1, #identifiers do
+    for i = 1, #identifiers do
         if string.find(identifiers[i], 'discord:') then
             return string.sub(identifiers[i], 9)
         end
@@ -147,39 +164,41 @@ function GetPlayerDiscord(src)
 
     return nil
 end
+
 function GetDiscordRole(src)
     local api = Config.DiscordTimeOut
     local discordId = GetPlayerDiscord(src)
     local info
 
-    if not discordId then return nil end 
+    if not discordId then return nil end
 
-    PerformHttpRequest("https://discordapp.com/api/guilds/" .. Config.GuildId .. "/members/" .. discordId, function(errorCode, resultData, resultHeaders)
-        api = 0
-        if not resultData then return end 
-        local roles = json.decode(resultData).roles
-        for v=1, #roles do 
-            for role, _ in pairs(Config.Admins) do
-                if roles[v] == role then
-                    info = role
-                    break
+    PerformHttpRequest("https://discordapp.com/api/guilds/" .. Config.GuildId .. "/members/" .. discordId,
+        function(errorCode, resultData, resultHeaders)
+            api = 0
+            if not resultData then return end
+            local roles = json.decode(resultData).roles
+            for v = 1, #roles do
+                for role, _ in pairs(Config.Admins) do
+                    if roles[v] == role then
+                        info = role
+                        break
+                    end
                 end
             end
-        end
-    end, "GET", "", {["Content-Type"] = "application/json", ["Authorization"] = "Bot " .. Config.BotToken})
+        end, "GET", "", { ["Content-Type"] = "application/json", ["Authorization"] = "Bot " .. Config.BotToken })
 
-    while api > 0 do 
+    while api > 0 do
         Wait(100)
         api = api - 100
-    end 
+    end
 
     return info
-end 
+end
 
 exports('GetDutys', function()
     return inDuty
 end)
 
-exports('IsInDuty', function(src) 
+exports('IsInDuty', function(src)
     return inDuty[src] and true or false
 end)

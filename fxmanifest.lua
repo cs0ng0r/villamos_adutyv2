@@ -2,24 +2,19 @@ fx_version 'adamant'
 
 game 'gta5'
 
-description 'admin duty by 6osvillamos'
+description 'admin duty by 6osvillamos - ESX & QB-Core Compatible'
 
-version '1.2.2'
+version '1.3.0'
 
 ui_page 'html/index.html'
 
 lua54 "yes"
 
-files {
-	"icons/*.png",
-	"html/**"
-}
-
 shared_scripts {
-	'@es_extended/imports.lua',
+	'@ox_lib/init.lua',
+	'bridge/bridge.lua',
 	'config/shared.lua',
-	'@es_extended/locale.lua',
-	'locales/*.lua',
+
 }
 
 server_scripts {
@@ -31,6 +26,12 @@ client_scripts {
 	'client.lua'
 }
 
+files {
+	"icons/*.png",
+	"html/**",
+	"locales/*.json"
+}
+
 dependencies {
-	'es_extended'
+	'ox_lib'
 }
